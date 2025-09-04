@@ -1,129 +1,114 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+/**
+ * Night-sky home:
+ * - Body has dark blue gradient background.
+ * - Starfield canvas is inside <main> at z-0 so stars show.
+ * - Six paintings float *slightly* around initial positions.
+ * - Centered name with typewriter (no blinking cursor).
+ * - No scroll; works with floating navbar.
+ */
+
+import { useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
+import Starfield from "./components/Starfield";
 
 export default function Home() {
-  const plane1 = useRef<HTMLDivElement>(null);
-  const plane2 = useRef<HTMLDivElement>(null);
-  const plane3 = useRef<HTMLDivElement>(null);
-
-  let xForce = 0;
-  let yForce = 0;
-  const easing = 0.1;
-  let rafId: number | null = null;
-
-  const lerp = (start: number, end: number, factor: number) =>
-    start * (1 - factor) + end * factor;
-
-  const animate = () => {
-    xForce = lerp(xForce, 0, easing);
-    yForce = lerp(yForce, 0, easing);
-
-    if (plane1.current) {
-      gsap.set(plane1.current, { x: `+=${Math.max(Math.min(xForce, 60), -60)}`, y: `+=${Math.max(Math.min(yForce, 60), -60)}` });
-    }
-    if (plane2.current) {
-      gsap.set(plane2.current, { x: `+=${Math.max(Math.min(xForce * 0.6, 40), -40)}`, y: `+=${Math.max(Math.min(yForce * 0.6, 40), -40)}` });
-    }
-    if (plane3.current) {
-      gsap.set(plane3.current, { x: `+=${Math.max(Math.min(xForce * 0.35, 25), -25)}`, y: `+=${Math.max(Math.min(yForce * 0.35, 25), -25)}` });
-    }
-
-    if (Math.abs(xForce) > 0.01 || Math.abs(yForce) > 0.01) {
-      rafId = requestAnimationFrame(animate);
-    } else {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    xForce = e.movementX * 1.5;
-    yForce = e.movementY * 1.5;
-    if (!rafId) rafId = requestAnimationFrame(animate);
-  };
+  const imgRefs = useRef<Array<HTMLDivElement | null>>([]);
 
   useEffect(() => {
-    return () => {
-      if (rafId) cancelAnimationFrame(rafId);
-    };
+    imgRefs.current.forEach((el, i) => {
+      if (!el) return;
+      const dx = 6 + (i % 3) * 2; // 6–10 px
+      const dy = 8 + (i % 2) * 2; // 8–10 px
+      const dur = 2 + (i % 3);    // 4–6s
+      const delay = i * 0.15;
+
+      gsap.to(el, {
+        x: `+=${dx}`,
+        y: `+=${dy}`,
+        duration: dur,
+        ease: "sine.inOut",
+        yoyo: true,
+        repeat: -1,
+        delay,
+      });
+    });
   }, []);
 
   const positions = [
-    { top: "10%", left: "12%", size: 240 },
-    { top: "65%", left: "18%", size: 220 },
-    { top: "20%", left: "70%", size: 180 },
-    { top: "75%", left: "68%", size: 170 },
-    { top: "38%", left: "6%", size: 140 },
-    { top: "30%", left: "82%", size: 140 },
+    { top: "12%", left: "10%", size: 240 },
+    { top: "68%", left: "16%", size: 220 },
+    { top: "22%", left: "72%", size: 190 },
+    { top: "76%", left: "70%", size: 175 },
+    { top: "40%", left: "6%",  size: 150 },
+    { top: "34%", left: "84%", size: 150 },
   ];
 
-  const plane1Imgs = positions.slice(0, 2);
-  const plane2Imgs = positions.slice(2, 4);
-  const plane3Imgs = positions.slice(4, 6);
-
   return (
-    <main
-      onMouseMove={handleMouseMove}
-      className="relative overflow-hidden"
-      style={{
-        height: "100vh",
-        backgroundColor: "rgb(245, 218, 223)",
-      }}
-    >
-      {/* Planes */}
-      <div ref={plane1} className="pointer-events-none absolute inset-0">
-        {plane1Imgs.map((p, idx) => (
-          <div key={`p1-${idx}`} className="absolute" style={{ top: p.top, left: p.left }}>
-            <Image src="/painting.jpeg" alt={`Artwork ${idx + 1}`} width={p.size} height={p.size}
-                   className="rounded-xl shadow-xl opacity-90 hover:opacity-100 transition-opacity duration-300" priority />
-          </div>
-        ))}
-      </div>
+    <main className="relative overflow-hidden" style={{ height: "100vh" }}>
+      {/* Starfield sits at z-0 inside the page so it renders above the body bg */}
+      <Starfield />
 
-      <div ref={plane2} className="pointer-events-none absolute inset-0">
-        {plane2Imgs.map((p, idx) => (
-          <div key={`p2-${idx}`} className="absolute" style={{ top: p.top, left: p.left }}>
-            <Image src="/painting.jpeg" alt={`Artwork ${idx + 3}`} width={p.size} height={p.size}
-                   className="rounded-xl shadow-xl opacity-85 hover:opacity-95 transition-opacity duration-300" priority />
-          </div>
-        ))}
-      </div>
+      {/* Optional faint nebula glows above stars but below content */}
+      <div
+        className="pointer-events-none absolute inset-0 z-5"
+        style={{
+          background:
+            "radial-gradient(1200px 600px at 20% 20%, rgba(140,160,255,0.12), transparent 60%), radial-gradient(900px 500px at 80% 70%, rgba(130,200,255,0.10), transparent 60%)",
+        }}
+      />
 
-      <div ref={plane3} className="pointer-events-none absolute inset-0">
-        {plane3Imgs.map((p, idx) => (
-          <div key={`p3-${idx}`} className="absolute" style={{ top: p.top, left: p.left }}>
-            <Image src="/painting.jpeg" alt={`Artwork ${idx + 5}`} width={p.size} height={p.size}
-                   className="rounded-xl shadow-xl opacity-80 hover:opacity-90 transition-opacity duration-300" priority />
-          </div>
-        ))}
-      </div>
+      {/* Paintings (z-10) */}
+      {positions.map((p, idx) => (
+        <div
+          key={idx}
+          ref={(el: HTMLDivElement | null) => {
+            imgRefs.current[idx] = el;
+          }}
+          className="absolute z-10"
+          style={{ top: p.top, left: p.left }}
+        >
+          <Image
+            src="/painting.jpeg"
+            alt={`Artwork ${idx + 1}`}
+            width={p.size}
+            height={p.size}
+            className="rounded-xl shadow-xl shadow-black/40 opacity-95"
+            priority
+          />
+        </div>
+      ))}
 
-      {/* Centered Name */}
-      <div className="absolute inset-0 flex items-center justify-center z-10">
+      {/* Title (z-20) */}
+      <div className="absolute inset-0 flex items-center justify-center z-20">
         <h1
           className="typewriter text-center leading-none"
           style={{
-            fontSize: "80px",
+            fontSize: "65px",
             fontFamily: "'Libertinus Keyboard', serif",
+            color: "rgb(220,230,255)",
             lineHeight: 1,
-            color: "rgb(36,36,36)", // updated text color
             whiteSpace: "nowrap",
+            textShadow: "0 6px 30px rgba(0,0,0,0.45)",
           }}
         >
           Anika U Bhat
         </h1>
       </div>
 
+      {/* Global: gradient bg on body, no scroll, font + typewriter */}
       <style jsx global>{`
-        @import url('https://fonts.googleapis.com/css2?family=Libertinus+Keyboard&display=swap');
+        @import url("https://fonts.googleapis.com/css2?family=Libertinus+Keyboard&display=swap");
 
-        html, body {
+        html,
+        body {
           height: 100%;
-          overflow: hidden;
-          background: rgb(245, 218, 223);
+          margin: 0;
+          overflow: hidden; /* lock scroll */
+          /* Night-sky gradient on the body so canvas sits above it */
+          background: linear-gradient(180deg, #0b1020 0%, #0f1b3b 60%, #0b1020 100%);
         }
 
         .typewriter {
@@ -132,21 +117,14 @@ export default function Home() {
           animation: typing 2.6s steps(14, end) 0.2s forwards;
           width: 0;
         }
-
         @keyframes typing {
           from { width: 0; }
           to   { width: 100%; }
         }
 
-        @media (max-width: 1280px) {
-          .typewriter { font-size: 140px !important; }
-        }
-        @media (max-width: 1024px) {
-          .typewriter { font-size: 100px !important; }
-        }
-        @media (max-width: 640px) {
-          .typewriter { font-size: 60px !important; }
-        }
+        @media (max-width: 1280px) { .typewriter { font-size: 84px !important; } }
+        @media (max-width: 1024px) { .typewriter { font-size: 64px !important; } }
+        @media (max-width: 640px)  { .typewriter { font-size: 44px !important; } }
       `}</style>
     </main>
   );

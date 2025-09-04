@@ -1,74 +1,138 @@
 "use client";
 
-import { useRef, useEffect } from "react";
+import { useEffect, useRef } from "react";
 import Image from "next/image";
-import gsap from "gsap";
-import styles from "./gallery.module.scss";
-import { images } from "./data";
 
 export default function Gallery() {
-  const plane1 = useRef<HTMLDivElement>(null);
-  const plane2 = useRef<HTMLDivElement>(null);
-  const plane3 = useRef<HTMLDivElement>(null);
+  // Demo images (repeat the same one)
+  const images = Array.from({ length: 32 }, () => "/painting.jpeg");
 
-  let xForce = 0;
-  let yForce = 0;
-  const easing = 0.1;
-  let rafId: number | null = null;
-
-  const lerp = (start: number, end: number, factor: number) =>
-    start * (1 - factor) + end * factor;
-
-  const animate = () => {
-    xForce = lerp(xForce, 0, easing);
-    yForce = lerp(yForce, 0, easing);
-
-    if (plane1.current) gsap.set(plane1.current, { x: `+=${xForce}`, y: `+=${yForce}` });
-    if (plane2.current) gsap.set(plane2.current, { x: `+=${xForce * 0.5}`, y: `+=${yForce * 0.5}` });
-    if (plane3.current) gsap.set(plane3.current, { x: `+=${xForce * 0.25}`, y: `+=${yForce * 0.25}` });
-
-    if (Math.abs(xForce) > 0.01 || Math.abs(yForce) > 0.01) {
-      rafId = requestAnimationFrame(animate);
-    } else {
-      if (rafId !== null) cancelAnimationFrame(rafId);
-      rafId = null;
-    }
-  };
-
-  const handleMouseMove = (e: React.MouseEvent) => {
-    xForce = e.movementX;
-    yForce = e.movementY;
-    if (!rafId) rafId = requestAnimationFrame(animate);
-  };
+  const containerRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    // All tiles
+    const tiles = Array.from(
+      container.querySelectorAll<HTMLElement>(".parallax-tile")
+    );
+
+    // Give each tile a small random speed for parallax
+    tiles.forEach((tile) => {
+      const speed = Math.random() * 0.6 + 0.2; // 0.2–0.8
+      tile.setAttribute("data-speed", String(speed));
+    });
+
+    // Fade-in when visible
+    const io = new IntersectionObserver(
+      (entries) => {
+        entries.forEach((entry) => {
+          const el = entry.target as HTMLElement;
+          if (entry.isIntersecting) {
+            el.classList.add("visible");
+          }
+        });
+      },
+      { root: null, rootMargin: "0px", threshold: 0.1 }
+    );
+    tiles.forEach((t) => io.observe(t));
+
+    // Parallax on scroll (rAF)
+    let ticking = false;
+    const onScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          const vhHalf = window.innerHeight / 2;
+          tiles.forEach((tile) => {
+            const inner = tile.querySelector<HTMLElement>(".parallax-inner");
+            if (!inner) return;
+            const rect = tile.getBoundingClientRect();
+            // distance of tile's center from viewport center
+            const offset = rect.top + rect.height / 2 - vhHalf;
+            const speed = parseFloat(tile.getAttribute("data-speed") || "0.4");
+            inner.style.transform = `translateY(${offset * speed * 0.15}px)`;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    onScroll(); // initial position
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+
     return () => {
-      if (rafId) cancelAnimationFrame(rafId);
+      window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("resize", onScroll);
+      io.disconnect();
     };
   }, []);
 
   return (
-    <main onMouseMove={handleMouseMove} className={styles.main}>
-      {/* Plane 1 - even indexes */}
-      <div ref={plane1} className={styles.plane}>
-        {images.filter((_, idx) => idx % 2 === 0).map((img, idx) => (
-          <Image key={idx} src={img} alt={`Artwork even ${idx}`} width={200} height={200} className="m-6" />
-        ))}
-      </div>
+    <main
+      className="min-h-screen"
+      style={{ backgroundColor: "rgb(245, 218, 223)" }}
+    >
+      {/* spacer so your floating navbar doesn't cover first row */}
+      <div style={{ height: "6rem" }} />
 
-      {/* Plane 2 - odd indexes */}
-      <div ref={plane2} className={styles.plane}>
-        {images.filter((_, idx) => idx % 2 !== 0).map((img, idx) => (
-          <Image key={idx} src={img} alt={`Artwork odd ${idx}`} width={150} height={150} className="m-6" />
+      {/* Masonry: CSS columns + avoid column breaks per tile */}
+      <section
+        ref={containerRef}
+        className="
+          columns-1
+          sm:columns-2
+          md:columns-3
+          lg:columns-4
+          gap-6 px-6 pb-24
+        "
+      >
+        {images.map((src, idx) => (
+          <article
+            key={idx}
+            className="
+              parallax-tile
+              mb-6 break-inside-avoid
+              tile
+              hover:-translate-y-1 transition-transform duration-300
+            "
+          >
+            <div className="parallax-inner">
+              <Image
+                src={src}
+                alt={`Artwork ${idx + 1}`}
+                width={1000}
+                height={800}
+                sizes="(max-width: 640px) 100vw,
+                       (max-width: 1024px) 50vw,
+                       25vw"
+                className="w-full h-auto rounded-xl shadow-xl"
+                priority={idx < 8}
+              />
+            </div>
+          </article>
         ))}
-      </div>
+      </section>
 
-      {/* Plane 3 - all images but smaller */}
-      <div ref={plane3} className={styles.plane}>
-        {images.map((img, idx) => (
-          <Image key={idx} src={img} alt={`Artwork small ${idx}`} width={100} height={100} className="m-6" />
-        ))}
-      </div>
+      {/* Small CSS block: fade-in + smooth scroll */}
+      <style jsx>{`
+        .tile {
+          opacity: 0;
+          transform: translateY(20px);
+          transition: opacity 0.6s ease, transform 0.6s ease;
+        }
+        .tile.visible {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      `}</style>
+      <style jsx global>{`
+        html {
+          scroll-behavior: smooth;
+        }
+      `}</style>
     </main>
   );
 }
