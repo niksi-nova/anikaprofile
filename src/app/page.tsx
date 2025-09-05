@@ -1,14 +1,5 @@
 "use client";
 
-/**
- * Night-sky home:
- * - Body has dark blue gradient background.
- * - Starfield canvas is inside <main> at z-0 so stars show.
- * - Six paintings float *slightly* around initial positions.
- * - Centered name with typewriter (no blinking cursor).
- * - No scroll; works with floating navbar.
- */
-
 import { useEffect, useRef } from "react";
 import Image from "next/image";
 import gsap from "gsap";
@@ -16,14 +7,58 @@ import Starfield from "./components/Starfield";
 
 export default function Home() {
   const imgRefs = useRef<Array<HTMLDivElement | null>>([]);
+  const titleRefs = useRef<Array<HTMLSpanElement | null>>([]);
+  const bioRef = useRef<HTMLParagraphElement | null>(null);
 
   useEffect(() => {
-    imgRefs.current.forEach((el, i) => {
-      if (!el) return;
-      const dx = 6 + (i % 3) * 2; // 6–10 px
-      const dy = 8 + (i % 2) * 2; // 8–10 px
-      const dur = 2 + (i % 3);    // 4–6s
-      const delay = i * 0.15;
+    const els = imgRefs.current.filter(Boolean) as HTMLElement[];
+    const titleEls = titleRefs.current.filter(Boolean) as HTMLElement[];
+
+    const tl = gsap.timeline();
+
+    const staggerAmount = 0.35;
+
+    // Animate images in
+    tl.fromTo(
+      els,
+      { opacity: 0, y: 30, scale: 0.96 },
+      {
+        opacity: 1,
+        y: 0,
+        scale: 1,
+        duration: 0.9,
+        ease: "power3.out",
+        stagger: staggerAmount,
+      }
+    );
+
+    // Animate title letters one by one
+    tl.fromTo(
+      titleEls,
+      { opacity: 0, y: 20 },
+      {
+        opacity: 1,
+        y: 0,
+        duration: 0.6,
+        ease: "power3.out",
+        stagger: 0.15,
+      },
+      "+=0.1"
+    );
+
+    // Animate bio text
+    tl.fromTo(
+      bioRef.current,
+      { opacity: 0, y: 20 },
+      { opacity: 1, y: 0, duration: 1.1, ease: "power3.out" },
+      "+=0.2"
+    );
+
+    // Floating images
+    els.forEach((el, i) => {
+      const dx = 6 + (i % 3) * 2;
+      const dy = 6 + (i % 2) * 2;
+      const dur = 4 + (i % 3);
 
       gsap.to(el, {
         x: `+=${dx}`,
@@ -32,35 +67,29 @@ export default function Home() {
         ease: "sine.inOut",
         yoyo: true,
         repeat: -1,
-        delay,
+        delay: i * 0.12,
       });
     });
+
+    return () => {
+      tl.kill();
+    };
   }, []);
 
   const positions = [
-    { top: "12%", left: "10%", size: 240 },
-    { top: "68%", left: "16%", size: 220 },
-    { top: "22%", left: "72%", size: 190 },
-    { top: "76%", left: "70%", size: 175 },
-    { top: "40%", left: "6%",  size: 150 },
-    { top: "34%", left: "84%", size: 150 },
+    { top: "6%", left: "8.5%", size: 240 },
+    { top: "37%", left: "4%", size: 180 },
+    { top: "60%", left: "9%", size: 220 },
+    { top: "13%", left: "30%", size: 180 },
+    { top: "37%", left: "25%", size: 250 },
+    { top: "70%", left: "35%", size: 160 },
   ];
 
   return (
     <main className="relative overflow-hidden" style={{ height: "100vh" }}>
-      {/* Starfield sits at z-0 inside the page so it renders above the body bg */}
       <Starfield />
 
-      {/* Optional faint nebula glows above stars but below content */}
-      <div
-        className="pointer-events-none absolute inset-0 z-5"
-        style={{
-          background:
-            "radial-gradient(1200px 600px at 20% 20%, rgba(140,160,255,0.12), transparent 60%), radial-gradient(900px 500px at 80% 70%, rgba(130,200,255,0.10), transparent 60%)",
-        }}
-      />
-
-      {/* Paintings (z-10) */}
+      {/* Paintings */}
       {positions.map((p, idx) => (
         <div
           key={idx}
@@ -75,56 +104,86 @@ export default function Home() {
             alt={`Artwork ${idx + 1}`}
             width={p.size}
             height={p.size}
-            className="rounded-xl shadow-xl shadow-black/40 opacity-95"
-            priority
+            className="rounded-xl shadow-xl shadow-black/40"
+            priority={idx < 3}
           />
         </div>
       ))}
 
-      {/* Title (z-20) */}
-      <div className="absolute inset-0 flex items-center justify-center z-20">
-        <h1
-          className="typewriter text-center leading-none"
-          style={{
-            fontSize: "65px",
-            fontFamily: "'Libertinus Keyboard', serif",
-            color: "rgb(220,230,255)",
-            lineHeight: 1,
-            whiteSpace: "nowrap",
-            textShadow: "0 6px 30px rgba(0,0,0,0.45)",
-          }}
-        >
-          Anika U Bhat
-        </h1>
+      {/* Title + Bio */}
+      <div
+        className="absolute inset-y-0 right-12 z-20 flex items-center"
+        style={{ maxWidth: "45%" }}
+      >
+        <div className="pr-6">
+          <h1
+            className="text-right leading-tight flex justify-end gap-2 londrina-sketch-regular"
+            style={{
+              fontSize: "80px",
+              color: "rgba(242, 194, 249, 1)",
+              textShadow: "0 6px 30px rgba(8, 8, 8, 0.45)",
+              marginBottom: "18px",
+            }}
+          >
+            {"A  N  I  K  A  ".split("").map((letter, idx) => (
+              <span
+                key={idx}
+                ref={(el: HTMLSpanElement | null) => {
+                  titleRefs.current[idx] = el;
+                }}
+                style={{ opacity: 0, display: "inline-block"}}
+              >
+                {letter}
+              </span>
+            ))}
+          </h1>
+
+          <p
+            ref={bioRef}
+            className="bio text-right"
+            style={{
+              fontFamily: "'The Girl Next Door', 'Libertinus Keyboard', serif",
+              fontSize: "20px",
+              color: "rgba(187, 207, 238, 0.95)",
+              lineHeight: 1.5,
+              textShadow: "0 2px 10px rgba(0,0,0,0.35)",
+              opacity: 0,
+            }}
+          >
+            Hi! I am Anika blah blah blah blah blah blah blah Follow{" "}
+            <a
+              href="https://instagram.com/anika_ub"
+              target="_blank"
+              rel="noreferrer"
+              style={{
+                color: "rgb(220,240,255)",
+                textDecoration: "underline",
+                textUnderlineOffset: "4px",
+              }}
+            >
+              @anika_ub
+            </a>{" "}
+            on Instagram for more!
+          </p>
+        </div>
       </div>
 
-      {/* Global: gradient bg on body, no scroll, font + typewriter */}
       <style jsx global>{`
-        @import url("https://fonts.googleapis.com/css2?family=Libertinus+Keyboard&display=swap");
+        @import url("https://fonts.googleapis.com/css2?family=Londrina+Sketch&family=The+Girl+Next+Door&display=swap");
 
         html,
         body {
           height: 100%;
           margin: 0;
-          overflow: hidden; /* lock scroll */
-          /* Night-sky gradient on the body so canvas sits above it */
+          overflow: hidden;
           background: linear-gradient(180deg, #0b1020 0%, #0f1b3b 60%, #0b1020 100%);
         }
 
-        .typewriter {
-          overflow: hidden;
-          letter-spacing: 0.02em;
-          animation: typing 2.6s steps(14, end) 0.2s forwards;
-          width: 0;
+        .londrina-sketch-regular {
+          font-family: "Londrina Sketch", sans-serif;
+          font-weight: 400;
+          font-style: normal;
         }
-        @keyframes typing {
-          from { width: 0; }
-          to   { width: 100%; }
-        }
-
-        @media (max-width: 1280px) { .typewriter { font-size: 84px !important; } }
-        @media (max-width: 1024px) { .typewriter { font-size: 64px !important; } }
-        @media (max-width: 640px)  { .typewriter { font-size: 44px !important; } }
       `}</style>
     </main>
   );
