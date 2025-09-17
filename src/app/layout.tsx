@@ -7,7 +7,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="en">
       <head>
-        <script src="https://cdn.tailwindcss.com"></script>
+        {/* Removed synchronous Tailwind CDN script to satisfy Next.js rules */}
 
         {/* Load fonts once at layout level */}
         <link rel="preconnect" href="https://fonts.googleapis.com" />
