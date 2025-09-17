@@ -4,7 +4,6 @@
 import { useEffect } from "react";
 import Starfield from "../components/Starfield"; // adjust path if your component is elsewhere
 import gsap from "gsap";
-import Link from "next/link";
 
 export default function ThanksPage() {
   useEffect(() => {
@@ -86,7 +85,7 @@ export default function ThanksPage() {
           >
             Your message has been sent — I’ll get back to you as soon as I can.
             Thanks for reaching out and for supporting my art. <br />
-            <Link
+            <a
               href="/"
               style={{
                 color: "rgb(220,240,255)",
@@ -96,7 +95,7 @@ export default function ThanksPage() {
               }}
             >
               Return home
-            </Link>
+            </a>
           </p>
         </div>
       </div>
